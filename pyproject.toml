@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "whisper-right-ctrl"
+version = "0.1.0"
+description = "Local Windows push-to-talk input powered by faster-whisper"
+requires-python = ">=3.11,<3.13"
+license = {file = "LICENSE"}
+readme = "README.md"
+dependencies = [
+  "faster-whisper==1.2.1",
+  "ctranslate2==4.8.1",
+  "nvidia-cublas-cu12==12.9.2.10; platform_system == 'Windows'",
+  "nvidia-cudnn-cu12==9.24.0.43; platform_system == 'Windows'",
+  "sounddevice==0.5.3",
+  "pynput==1.8.1",
+  "opencc-python-reimplemented==0.1.7",
+  "pyperclip==1.11.0",
+  "pystray==0.19.5",
+  "Pillow==11.3.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.1.1"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
