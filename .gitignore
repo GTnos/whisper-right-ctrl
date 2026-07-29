@@ -2,6 +2,7 @@
 dist/
 build/
 PUBLISH_GITHUB.cmd
+UPDATE_GITHUB_INTRO.cmd
 *.egg-info/
 __pycache__/
 .pytest_cache/

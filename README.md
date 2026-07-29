@@ -1,5 +1,56 @@
 # Whisper Right Ctrl
 
+[![Tests](https://github.com/GTnos/whisper-right-ctrl/actions/workflows/test.yml/badge.svg)](https://github.com/GTnos/whisper-right-ctrl/actions/workflows/test.yml)
+[![Release](https://img.shields.io/github/v/release/GTnos/whisper-right-ctrl)](https://github.com/GTnos/whisper-right-ctrl/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+## 用 Right Ctrl，把 Whisper 變成 Windows 本機語音輸入
+
+Whisper Right Ctrl 是一款為 Windows 11 設計的開源「按住說話」工具。
+
+把游標放在 LINE、瀏覽器、Word、Notion、Obsidian 或其他文字欄位，按住鍵盤右側的 **Ctrl** 說話，放開後便會使用 `faster-whisper` 在本機辨識，轉成繁體中文並貼到游標位置。
+
+### 為什麼做這個工具？
+
+Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 的語音辨識服務。這個工具提供另一個選擇：
+
+- 錄音在記憶體中交給本機模型處理
+- 支援 NVIDIA CUDA `float16` 加速
+- 按住 Right Ctrl 錄音，放開後自動貼入
+- OpenCC 自動轉換為繁體中文
+- 可設定登入 Windows 後靜默啟動
+- 不會留下黑色命令視窗
+- 支援瀏覽器、通訊軟體、文件編輯器及筆記工具
+- 原始碼、安裝流程與測試全部公開
+
+### 快速開始
+
+1. 前往 [Releases](https://github.com/GTnos/whisper-right-ctrl/releases/latest) 下載最新版 ZIP。
+2. 解壓縮到固定資料夾。
+3. 執行 `INSTALL.cmd`。
+4. 從清單選擇正確的麥克風。
+5. 首次啟動等待 `turbo` 模型下載完成。
+6. 按住 Right Ctrl 說話，放開後等待文字出現。
+
+> 預設設定以 NVIDIA GPU 為目標。參考測試硬體為 RTX 4060 Ti 16 GB。
+
+### 適合情境
+
+- 快速回覆 Email、LINE 與社群訊息
+- 在 ChatGPT、Codex 或其他 AI 工具中用語音輸入提示
+- 會議後補充筆記與工作事項
+- 工地巡檢、設計討論及施工紀錄
+- 長篇 Word、Notion 或 Obsidian 草稿
+- 希望錄音不送到雲端的工作環境
+
+### 隱私說明
+
+模型下載完成後，語音轉文字在本機執行。本工具不會把錄音上傳到 OpenAI，也不會儲存錄音或逐字稿。首次安裝套件與下載模型時仍需要網路連線。
+
+---
+
+## English documentation
+
 Local push-to-talk voice input for Windows 11, powered by `faster-whisper`.
 
 Hold the keyboard's **Right Ctrl** key to record. Release it to transcribe, convert Chinese output to Traditional Chinese, and paste the result at the active caret.
