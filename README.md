@@ -21,6 +21,7 @@ Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 
 - 可從工作列圖示直接切換麥克風
 - 依麥克風名稱自動找回裝置，不受 Windows 重排編號影響
 - 若目前的 Windows 音訊介面暫時失效，會自動嘗試同一支麥克風的其他介面
+- 若 Windows 休眠後所有音訊介面都失效，會自動重新啟動並重建麥克風連線
 - 每次啟動會實際檢查裝置，只在選單顯示能正常開啟的麥克風
 - 同一支麥克風的重複 Windows 介面會合併成一個選項
 - 可設定登入 Windows 後靜默啟動
@@ -36,6 +37,8 @@ Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 
 4. 從清單選擇正確的麥克風。
 5. 首次啟動等待 `turbo` 模型下載完成。
 6. 按住 Right Ctrl 說話，放開後等待文字出現。
+
+若 v0.3.0 在重新開機後顯示 Windows Script Host `800A0408 無效的資料`，請下載 v0.3.1，解壓縮後重新執行 `INSTALL.cmd`；安裝程式會覆寫成 Windows Script Host 相容的登入啟動檔。
 
 若要更換輸入裝置，請在工作列通知區的綠色麥克風圖示按滑鼠右鍵，開啟「Microphone」選單。選擇會立即生效並保存；下次登入時，即使 Windows 改變裝置編號，程式也會依名稱找回原本的麥克風。
 
@@ -77,6 +80,7 @@ Hold the keyboard's **Right Ctrl** key to record. Release it to transcribe, conv
 - Runtime microphone selection from the tray menu
 - Automatic recovery when Windows changes a microphone's numeric device index
 - Automatic fallback to another interface for the same microphone when the current Windows audio interface fails
+- Automatic application restart when sleep invalidates every Windows audio interface
 - Startup validation hides input devices that cannot actually open
 - Duplicate interfaces with the same microphone name are collapsed into one menu choice
 

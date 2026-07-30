@@ -70,6 +70,8 @@ class Application:
     def __init__(self):
         self.icon = None
         self.listener = None
+        self.exit_code = 0
+        self.recovery_requested = False
         self.config = load_config()
         detected = list_input_devices()
         detected.sort(key=lambda device: device.index != self.config.input_device)
@@ -114,6 +116,7 @@ class Application:
             inserter=ClipboardInserter(self.config.restore_clipboard),
             minimum_seconds=self.config.minimum_seconds,
             on_state_change=self.on_state_change,
+            on_recording_error=self.on_recording_error,
         )
 
     def on_state_change(self, state):
@@ -180,6 +183,19 @@ class Application:
             self.icon.notify(f"Recovered microphone: {device.name}", "Whisper Right Ctrl")
             self.icon.update_menu()
 
+    def on_recording_error(self, error):
+        if self.recovery_requested:
+            return
+        self.recovery_requested = True
+        self.exit_code = 75
+        logging.error("Requesting audio recovery restart: %s", error)
+        if self.icon:
+            self.icon.notify(
+                "Microphone became unavailable. Restarting automatically.",
+                "Whisper Right Ctrl",
+            )
+        self.stop()
+
     def microphone_menu(self):
         return pystray.Menu(
             *[
@@ -210,6 +226,7 @@ class Application:
         self.icon = pystray.Icon("whisper-right-ctrl", make_icon(), "Whisper Right Ctrl — ready", menu)
         logging.info("Ready: hold Right Ctrl to record")
         self.icon.run()
+        return self.exit_code
 
 
 def main() -> int:
@@ -218,8 +235,7 @@ def main() -> int:
     if mutex is None:
         return 0
     try:
-        Application().run()
-        return 0
+        return Application().run()
     except BaseException:
         logging.exception("Application crashed")
         return 1

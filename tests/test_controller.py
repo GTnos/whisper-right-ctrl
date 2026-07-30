@@ -71,3 +71,25 @@ def test_transcript_is_converted_and_inserted():
 
 def test_clean_transcript_normalizes_whitespace():
     assert clean_transcript("  first\n\nsecond  ") == "first second"
+
+
+def test_recording_failure_requests_application_recovery():
+    class BrokenRecorder:
+        def start(self):
+            raise RuntimeError("audio interface stopped after sleep")
+
+        def stop(self):
+            return np.empty(0, dtype=np.float32)
+
+    errors = []
+    controller = PushToTalkController(
+        recorder=BrokenRecorder(),
+        transcriber=lambda audio: "",
+        converter=lambda text: text,
+        inserter=lambda text: None,
+        on_recording_error=errors.append,
+    )
+
+    assert not controller.press()
+    assert len(errors) == 1
+    assert str(errors[0]) == "audio interface stopped after sleep"
