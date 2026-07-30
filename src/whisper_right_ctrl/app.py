@@ -24,7 +24,13 @@ from whisper_right_ctrl.adapters import (
 )
 from whisper_right_ctrl.config import app_data_dir, load_config, log_path, save_config
 from whisper_right_ctrl.controller import PushToTalkController
-from whisper_right_ctrl.microphones import MicrophoneDevice, list_input_devices, resolve_input_device
+from whisper_right_ctrl.microphones import (
+    MicrophoneDevice,
+    deduplicate_input_devices,
+    filter_working_input_devices,
+    list_input_devices,
+    resolve_input_device,
+)
 
 
 MUTEX_NAME = "Local\\WhisperRightCtrlVoiceInput"
@@ -65,14 +71,26 @@ class Application:
         self.icon = None
         self.listener = None
         self.config = load_config()
-        self.microphones = list_input_devices()
+        detected = list_input_devices()
+        detected.sort(key=lambda device: device.index != self.config.input_device)
+        logging.info("Checking %s microphone input interfaces", len(detected))
+        self.available_microphones = filter_working_input_devices(detected)
         selected = resolve_input_device(
-            self.microphones,
+            self.available_microphones,
             self.config.input_device,
             self.config.input_device_name,
         )
         if selected is None:
             raise RuntimeError("Run CONFIGURE_MICROPHONE.cmd before starting.")
+        self.microphones = deduplicate_input_devices(
+            self.available_microphones,
+            preferred_index=selected.index,
+        )
+        logging.info(
+            "Showing %s working microphones from %s usable interfaces",
+            len(self.microphones),
+            len(self.available_microphones),
+        )
         self.config.input_device = selected.index
         self.config.input_device_name = selected.name
         save_config(self.config)
@@ -82,7 +100,7 @@ class Application:
         transcriber.warm_up()
         fallback_devices = [
             device.index
-            for device in self.microphones
+            for device in self.available_microphones
             if device.name == selected.name and device.index != selected.index
         ]
         self.controller = PushToTalkController(
@@ -134,7 +152,7 @@ class Application:
                 return
             fallback_devices = [
                 candidate.index
-                for candidate in self.microphones
+                for candidate in self.available_microphones
                 if candidate.name == device.name and candidate.index != device.index
             ]
             self.controller.recorder.set_devices(device.index, fallback_devices)
@@ -148,7 +166,10 @@ class Application:
         return select
 
     def on_recorder_device_changed(self, index):
-        device = next((candidate for candidate in self.microphones if candidate.index == index), None)
+        device = next(
+            (candidate for candidate in self.available_microphones if candidate.index == index),
+            None,
+        )
         if device is None:
             return
         self.config.input_device = device.index
@@ -163,7 +184,7 @@ class Application:
         return pystray.Menu(
             *[
                 pystray.MenuItem(
-                    f"[{device.index}] {device.name}",
+                    device.name,
                     self.microphone_action(device),
                     checked=self.microphone_checked(device),
                     radio=True,
