@@ -22,8 +22,9 @@ from whisper_right_ctrl.adapters import (
     WhisperTranscriber,
     add_nvidia_dll_directories,
 )
-from whisper_right_ctrl.config import app_data_dir, load_config, log_path
+from whisper_right_ctrl.config import app_data_dir, load_config, log_path, save_config
 from whisper_right_ctrl.controller import PushToTalkController
+from whisper_right_ctrl.microphones import MicrophoneDevice, list_input_devices, resolve_input_device
 
 
 MUTEX_NAME = "Local\\WhisperRightCtrlVoiceInput"
@@ -64,8 +65,17 @@ class Application:
         self.icon = None
         self.listener = None
         self.config = load_config()
-        if self.config.input_device is None:
+        self.microphones = list_input_devices()
+        selected = resolve_input_device(
+            self.microphones,
+            self.config.input_device,
+            self.config.input_device_name,
+        )
+        if selected is None:
             raise RuntimeError("Run CONFIGURE_MICROPHONE.cmd before starting.")
+        self.config.input_device = selected.index
+        self.config.input_device_name = selected.name
+        save_config(self.config)
         add_nvidia_dll_directories(PROJECT_ROOT)
         logging.info("Loading %s on %s/%s", self.config.model, self.config.device, self.config.compute_type)
         transcriber = WhisperTranscriber(self.config)
@@ -105,6 +115,37 @@ class Application:
     def pause_label(self, item):
         return "Resume Right Ctrl" if self.controller.paused else "Pause Right Ctrl"
 
+    def microphone_checked(self, device: MicrophoneDevice):
+        return lambda item: self.controller.recorder.device == device.index
+
+    def microphone_action(self, device: MicrophoneDevice):
+        def select(icon, item):
+            if self.controller.state not in {"ready", "paused"}:
+                icon.notify("Wait until transcription finishes before changing microphone.", "Whisper Right Ctrl")
+                return
+            self.controller.recorder.device = device.index
+            self.config.input_device = device.index
+            self.config.input_device_name = device.name
+            save_config(self.config)
+            logging.info("Selected input device: [%s] %s", device.index, device.name)
+            icon.notify(f"Microphone: {device.name}", "Whisper Right Ctrl")
+            icon.update_menu()
+
+        return select
+
+    def microphone_menu(self):
+        return pystray.Menu(
+            *[
+                pystray.MenuItem(
+                    f"[{device.index}] {device.name}",
+                    self.microphone_action(device),
+                    checked=self.microphone_checked(device),
+                    radio=True,
+                )
+                for device in self.microphones
+            ]
+        )
+
     def stop(self, icon=None, item=None):
         if self.listener:
             self.listener.stop()
@@ -115,6 +156,7 @@ class Application:
         self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
         self.listener.start()
         menu = pystray.Menu(
+            pystray.MenuItem("Microphone", self.microphone_menu()),
             pystray.MenuItem(self.pause_label, self.toggle_pause),
             pystray.MenuItem("Exit", self.stop),
         )

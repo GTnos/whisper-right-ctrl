@@ -2,27 +2,18 @@ from __future__ import annotations
 
 import sys
 
-from .config import AppConfig, load_config, save_config
-
-
-def input_devices():
-    import sounddevice as sd
-
-    result = []
-    for index, device in enumerate(sd.query_devices()):
-        if int(device["max_input_channels"]) > 0:
-            result.append((index, str(device["name"]), int(device["max_input_channels"])))
-    return result
+from .config import load_config, save_config
+from .microphones import list_input_devices
 
 
 def main() -> int:
-    devices = input_devices()
+    devices = list_input_devices()
     if not devices:
         print("No microphone input device was found.")
         return 1
     print("\nAvailable microphone devices:\n")
-    for index, name, channels in devices:
-        print(f"  [{index}] {name} ({channels} input channel(s))")
+    for device in devices:
+        print(f"  [{device.index}] {device.name} ({device.channels} input channel(s))")
     current = load_config()
     default = current.input_device
     prompt = f"\nMicrophone number [{default if default is not None else 'required'}]: "
@@ -36,12 +27,13 @@ def main() -> int:
         except ValueError:
             print("Enter one of the device numbers shown above.")
             continue
-        if any(index == selected for index, _, _ in devices):
+        if any(device.index == selected for device in devices):
             break
         print("That device is not an available microphone.")
     current.input_device = selected
+    name = next(device.name for device in devices if device.index == selected)
+    current.input_device_name = name
     path = save_config(current)
-    name = next(name for index, name, _ in devices if index == selected)
     print(f"\nSaved microphone: [{selected}] {name}")
     print(f"Configuration: {path}")
     return 0

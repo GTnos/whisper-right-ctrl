@@ -12,6 +12,7 @@ APP_DIRECTORY_NAME = "WhisperRightCtrl"
 @dataclass
 class AppConfig:
     input_device: int | str | None = None
+    input_device_name: str | None = None
     language: str | None = "zh"
     model: str = "turbo"
     device: str = "cuda"
