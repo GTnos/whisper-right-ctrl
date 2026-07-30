@@ -23,11 +23,25 @@ def add_nvidia_dll_directories(project_root) -> None:
 
 
 class SoundDeviceRecorder:
-    def __init__(self, device=None, sample_rate: int = 16000) -> None:
+    def __init__(
+        self,
+        device=None,
+        sample_rate: int = 16000,
+        fallback_devices=(),
+        on_device_changed=None,
+        stream_factory=None,
+    ) -> None:
         self.device = device
         self.sample_rate = sample_rate
+        self.fallback_devices = list(fallback_devices)
+        self.on_device_changed = on_device_changed
+        self.stream_factory = stream_factory
         self._stream = None
         self._chunks = queue.SimpleQueue()
+
+    def set_devices(self, primary, fallbacks=()) -> None:
+        self.device = primary
+        self.fallback_devices = list(fallbacks)
 
     def _callback(self, indata, frames, timing, status) -> None:
         if status:
@@ -35,17 +49,45 @@ class SoundDeviceRecorder:
         self._chunks.put(indata[:, 0].copy())
 
     def start(self) -> None:
-        import sounddevice as sd
+        if self.stream_factory is None:
+            import sounddevice as sd
+
+            create_stream = sd.InputStream
+        else:
+            create_stream = self.stream_factory
 
         self._chunks = queue.SimpleQueue()
-        self._stream = sd.InputStream(
-            device=self.device,
-            samplerate=self.sample_rate,
-            channels=1,
-            dtype="float32",
-            callback=self._callback,
-        )
-        self._stream.start()
+        candidates = list(dict.fromkeys([self.device, *self.fallback_devices]))
+        last_error = None
+        for candidate in candidates:
+            stream = None
+            try:
+                stream = create_stream(
+                    device=candidate,
+                    samplerate=self.sample_rate,
+                    channels=1,
+                    dtype="float32",
+                    callback=self._callback,
+                )
+                stream.start()
+            except BaseException as error:
+                last_error = error
+                logging.warning("Unable to open input device %r; trying fallback", candidate, exc_info=True)
+                if stream is not None:
+                    try:
+                        stream.close()
+                    except BaseException:
+                        pass
+                continue
+            self._stream = stream
+            if candidate != self.device:
+                self.device = candidate
+                if self.on_device_changed:
+                    self.on_device_changed(candidate)
+            return
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("No microphone input device is configured.")
 
     def stop(self) -> np.ndarray:
         stream, self._stream = self._stream, None

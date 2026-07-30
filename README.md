@@ -20,6 +20,7 @@ Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 
 - OpenCC 自動轉換為繁體中文
 - 可從工作列圖示直接切換麥克風
 - 依麥克風名稱自動找回裝置，不受 Windows 重排編號影響
+- 若目前的 Windows 音訊介面暫時失效，會自動嘗試同一支麥克風的其他介面
 - 可設定登入 Windows 後靜默啟動
 - 不會留下黑色命令視窗
 - 支援瀏覽器、通訊軟體、文件編輯器及筆記工具
@@ -71,6 +72,7 @@ Hold the keyboard's **Right Ctrl** key to record. Release it to transcribe, conv
 - Tray icon for ready, recording, transcribing, pause, and exit states
 - Runtime microphone selection from the tray menu
 - Automatic recovery when Windows changes a microphone's numeric device index
+- Automatic fallback to another interface for the same microphone when the current Windows audio interface fails
 
 ## Privacy
 

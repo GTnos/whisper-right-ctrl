@@ -80,8 +80,17 @@ class Application:
         logging.info("Loading %s on %s/%s", self.config.model, self.config.device, self.config.compute_type)
         transcriber = WhisperTranscriber(self.config)
         transcriber.warm_up()
+        fallback_devices = [
+            device.index
+            for device in self.microphones
+            if device.name == selected.name and device.index != selected.index
+        ]
         self.controller = PushToTalkController(
-            recorder=SoundDeviceRecorder(self.config.input_device),
+            recorder=SoundDeviceRecorder(
+                self.config.input_device,
+                fallback_devices=fallback_devices,
+                on_device_changed=self.on_recorder_device_changed,
+            ),
             transcriber=transcriber,
             converter=TraditionalChineseConverter(),
             inserter=ClipboardInserter(self.config.restore_clipboard),
@@ -123,7 +132,12 @@ class Application:
             if self.controller.state not in {"ready", "paused"}:
                 icon.notify("Wait until transcription finishes before changing microphone.", "Whisper Right Ctrl")
                 return
-            self.controller.recorder.device = device.index
+            fallback_devices = [
+                candidate.index
+                for candidate in self.microphones
+                if candidate.name == device.name and candidate.index != device.index
+            ]
+            self.controller.recorder.set_devices(device.index, fallback_devices)
             self.config.input_device = device.index
             self.config.input_device_name = device.name
             save_config(self.config)
@@ -132,6 +146,18 @@ class Application:
             icon.update_menu()
 
         return select
+
+    def on_recorder_device_changed(self, index):
+        device = next((candidate for candidate in self.microphones if candidate.index == index), None)
+        if device is None:
+            return
+        self.config.input_device = device.index
+        self.config.input_device_name = device.name
+        save_config(self.config)
+        logging.info("Automatically switched input device: [%s] %s", device.index, device.name)
+        if self.icon:
+            self.icon.notify(f"Recovered microphone: {device.name}", "Whisper Right Ctrl")
+            self.icon.update_menu()
 
     def microphone_menu(self):
         return pystray.Menu(
