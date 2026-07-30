@@ -16,7 +16,7 @@ def startup_directory(appdata: str | Path | None = None) -> Path:
 def render_startup_vbs(project_root: Path) -> str:
     root = str(project_root.resolve()).replace('"', '""')
     return f'''Option Explicit
-Dim shell, environment, projectRoot, pythonw, application, command
+Dim shell, environment, projectRoot, pythonw, application, command, exitCode
 Set shell = CreateObject("WScript.Shell")
 projectRoot = "{root}"
 pythonw = projectRoot & "\\.venv\\Scripts\\pythonw.exe"
@@ -25,7 +25,14 @@ Set environment = shell.Environment("Process")
 environment("PATH") = projectRoot & "\\.venv\\Lib\\site-packages\\nvidia\\cublas\\bin;" & projectRoot & "\\.venv\\Lib\\site-packages\\nvidia\\cudnn\\bin;" & environment("PATH")
 shell.CurrentDirectory = projectRoot
 command = Chr(34) & pythonw & Chr(34) & " " & Chr(34) & application & Chr(34)
-shell.Run command, 0, False
+Do
+    exitCode = shell.Run(command, 0, True)
+    If exitCode = 75 Then
+        WScript.Sleep 1500
+    Else
+        Exit Do
+    End If
+Loop
 '''
 
 
@@ -33,7 +40,7 @@ def enable(project_root: Path, appdata: str | Path | None = None) -> Path:
     directory = startup_directory(appdata)
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / ENTRY_NAME
-    target.write_text(render_startup_vbs(project_root), encoding="utf-8-sig")
+    target.write_text(render_startup_vbs(project_root), encoding="utf-16")
     return target
 
 

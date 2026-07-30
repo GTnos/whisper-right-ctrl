@@ -28,6 +28,7 @@ class PushToTalkController:
         sample_rate: int = 16000,
         minimum_seconds: float = 0.25,
         on_state_change: Callable[[str], None] | None = None,
+        on_recording_error: Callable[[BaseException], None] | None = None,
     ) -> None:
         self.recorder = recorder
         self.transcriber = transcriber
@@ -35,6 +36,7 @@ class PushToTalkController:
         self.inserter = inserter
         self.minimum_samples = round(sample_rate * minimum_seconds)
         self.on_state_change = on_state_change
+        self.on_recording_error = on_recording_error
         self._state = "ready"
         self._paused = False
         self._lock = threading.Lock()
@@ -69,9 +71,11 @@ class PushToTalkController:
             self._state = "recording"
         try:
             self.recorder.start()
-        except BaseException:
+        except BaseException as error:
             logging.exception("Unable to start recording")
             self._set_state("ready")
+            if self.on_recording_error:
+                self.on_recording_error(error)
             return False
         if self.on_state_change:
             self.on_state_change("recording")
