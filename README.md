@@ -18,6 +18,8 @@ Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 
 - 支援 NVIDIA CUDA `float16` 加速
 - 按住 Right Ctrl 錄音，放開後自動貼入
 - OpenCC 自動轉換為繁體中文
+- 可從工作列圖示直接切換麥克風
+- 依麥克風名稱自動找回裝置，不受 Windows 重排編號影響
 - 可設定登入 Windows 後靜默啟動
 - 不會留下黑色命令視窗
 - 支援瀏覽器、通訊軟體、文件編輯器及筆記工具
@@ -31,6 +33,8 @@ Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 
 4. 從清單選擇正確的麥克風。
 5. 首次啟動等待 `turbo` 模型下載完成。
 6. 按住 Right Ctrl 說話，放開後等待文字出現。
+
+若要更換輸入裝置，請在工作列通知區的綠色麥克風圖示按滑鼠右鍵，開啟「Microphone」選單。選擇會立即生效並保存；下次登入時，即使 Windows 改變裝置編號，程式也會依名稱找回原本的麥克風。
 
 > 預設設定以 NVIDIA GPU 為目標。參考測試硬體為 RTX 4060 Ti 16 GB。
 
@@ -65,6 +69,8 @@ Hold the keyboard's **Right Ctrl** key to record. Release it to transcribe, conv
 - Hidden startup with no command window
 - Restores the previous text clipboard after pasting
 - Tray icon for ready, recording, transcribing, pause, and exit states
+- Runtime microphone selection from the tray menu
+- Automatic recovery when Windows changes a microphone's numeric device index
 
 ## Privacy
 
