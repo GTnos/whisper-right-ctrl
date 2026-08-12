@@ -22,6 +22,9 @@ Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 
 - 依麥克風名稱自動找回裝置，不受 Windows 重排編號影響
 - 若目前的 Windows 音訊介面暫時失效，會自動嘗試同一支麥克風的其他介面
 - 若 Windows 休眠後所有音訊介面都失效，會自動重新啟動並重建麥克風連線
+- 系統從休眠恢復時只重建麥克風連線，Whisper 模型保持在記憶體中
+- 可按左側 `Ctrl + Alt + F12` 立即重新連接麥克風
+- 工作列圖示會顯示就緒、錄音、辨識、重新連線及無法使用等狀態
 - 每次啟動會實際檢查裝置，只在選單顯示能正常開啟的麥克風
 - 同一支麥克風的重複 Windows 介面會合併成一個選項
 - 可設定登入 Windows 後靜默啟動
@@ -41,6 +44,8 @@ Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 
 若 v0.3.0 在重新開機後顯示 Windows Script Host `800A0408 無效的資料`，請下載 v0.3.1，解壓縮後重新執行 `INSTALL.cmd`；安裝程式會覆寫成 Windows Script Host 相容的登入啟動檔。
 
 若要更換輸入裝置，請在工作列通知區的綠色麥克風圖示按滑鼠右鍵，開啟「Microphone」選單。選擇會立即生效並保存；下次登入時，即使 Windows 改變裝置編號，程式也會依名稱找回原本的麥克風。
+
+若電腦從休眠恢復後麥克風尚未就緒，可按鍵盤左側 `Ctrl + Alt + F12`，或在工作列麥克風圖示按滑鼠右鍵後選擇 `Reconnect microphone now`。藍色代表正在重新連線、綠色代表可用、紅色代表錄音中、橘色代表辨識中、深紅色代表麥克風仍無法使用。
 
 啟動時會短暫檢查每個輸入裝置。無法使用的介面不會出現在選單，同一支實體麥克風也只會顯示一次；檢查過程不會儲存錄音。
 
@@ -81,6 +86,8 @@ Hold the keyboard's **Right Ctrl** key to record. Release it to transcribe, conv
 - Automatic recovery when Windows changes a microphone's numeric device index
 - Automatic fallback to another interface for the same microphone when the current Windows audio interface fails
 - Automatic application restart when sleep invalidates every Windows audio interface
+- In-process audio recovery after sleep without reloading the Whisper model
+- Manual microphone recovery with Left Ctrl + Alt + F12
 - Startup validation hides input devices that cannot actually open
 - Duplicate interfaces with the same microphone name are collapsed into one menu choice
 

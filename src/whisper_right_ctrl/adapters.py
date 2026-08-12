@@ -30,12 +30,14 @@ class SoundDeviceRecorder:
         fallback_devices=(),
         on_device_changed=None,
         stream_factory=None,
+        backend_reset=None,
     ) -> None:
         self.device = device
         self.sample_rate = sample_rate
         self.fallback_devices = list(fallback_devices)
         self.on_device_changed = on_device_changed
         self.stream_factory = stream_factory
+        self.backend_reset = backend_reset
         self._stream = None
         self._chunks = queue.SimpleQueue()
 
@@ -88,6 +90,27 @@ class SoundDeviceRecorder:
         if last_error is not None:
             raise last_error
         raise RuntimeError("No microphone input device is configured.")
+
+    def recover(self) -> None:
+        stale_stream, self._stream = self._stream, None
+        if stale_stream is not None:
+            try:
+                stale_stream.stop()
+            except BaseException:
+                pass
+            try:
+                stale_stream.close()
+            except BaseException:
+                pass
+        if self.backend_reset is not None:
+            self.backend_reset()
+        else:
+            import sounddevice as sd
+
+            sd._terminate()
+            sd._initialize()
+        self.start()
+        self.stop()
 
     def stop(self) -> np.ndarray:
         stream, self._stream = self._stream, None

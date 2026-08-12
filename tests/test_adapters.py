@@ -11,6 +11,9 @@ class Stream:
     def close(self):
         pass
 
+    def stop(self):
+        self.started = False
+
 
 def test_recorder_falls_back_when_the_saved_audio_interface_cannot_open():
     attempted = []
@@ -36,3 +39,19 @@ def test_recorder_falls_back_when_the_saved_audio_interface_cannot_open():
     assert fallback_stream.started
     assert recorder.device == 30
     assert selected == [30]
+
+
+def test_recorder_recovery_resets_audio_backend_and_probes_microphone():
+    events = []
+    stream = Stream()
+    recorder = SoundDeviceRecorder(
+        device=12,
+        stream_factory=lambda **options: stream,
+        backend_reset=lambda: events.append("reset"),
+    )
+
+    recorder.recover()
+
+    assert events == ["reset"]
+    assert not stream.started
+    assert recorder._stream is None
