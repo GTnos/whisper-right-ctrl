@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "whisper-right-ctrl"
-version = "0.3.1"
+version = "0.4.0"
 description = "Local Windows push-to-talk input powered by faster-whisper"
 requires-python = ">=3.11,<3.13"
 license = {file = "LICENSE"}

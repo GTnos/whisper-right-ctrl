@@ -3,6 +3,8 @@ from __future__ import annotations
 import ctypes
 import logging
 import sys
+import threading
+import time
 import winsound
 from pathlib import Path
 
@@ -31,6 +33,7 @@ from whisper_right_ctrl.microphones import (
     list_input_devices,
     resolve_input_device,
 )
+from whisper_right_ctrl.recovery import RecoveryCoordinator, RecoveryHotkey, ResumeMonitor
 
 
 MUTEX_NAME = "Local\\WhisperRightCtrlVoiceInput"
@@ -70,8 +73,8 @@ class Application:
     def __init__(self):
         self.icon = None
         self.listener = None
-        self.exit_code = 0
-        self.recovery_requested = False
+        self.current_state = "checking"
+        self.monitor_stop = threading.Event()
         self.config = load_config()
         detected = list_input_devices()
         detected.sort(key=lambda device: device.index != self.config.input_device)
@@ -105,12 +108,13 @@ class Application:
             for device in self.available_microphones
             if device.name == selected.name and device.index != selected.index
         ]
-        self.controller = PushToTalkController(
-            recorder=SoundDeviceRecorder(
+        recorder = SoundDeviceRecorder(
                 self.config.input_device,
                 fallback_devices=fallback_devices,
                 on_device_changed=self.on_recorder_device_changed,
-            ),
+            )
+        self.controller = PushToTalkController(
+            recorder=recorder,
             transcriber=transcriber,
             converter=TraditionalChineseConverter(),
             inserter=ClipboardInserter(self.config.restore_clipboard),
@@ -118,10 +122,22 @@ class Application:
             on_state_change=self.on_state_change,
             on_recording_error=self.on_recording_error,
         )
+        self.recovery = RecoveryCoordinator(recorder.recover, self.on_recovery_state_change)
+        self.recovery_hotkey = RecoveryHotkey(self.request_recovery)
+        self.resume_monitor = ResumeMonitor(self.request_recovery)
 
     def on_state_change(self, state):
         logging.info("State: %s", state)
-        colors = {"ready": "#16A34A", "recording": "#DC2626", "transcribing": "#D97706", "paused": "#6B7280"}
+        self.current_state = state
+        colors = {
+            "ready": "#16A34A",
+            "recording": "#DC2626",
+            "transcribing": "#D97706",
+            "paused": "#6B7280",
+            "checking": "#2563EB",
+            "reconnecting": "#2563EB",
+            "unavailable": "#7F1D1D",
+        }
         if state == "recording":
             winsound.Beep(880, 45)
         elif state == "transcribing":
@@ -132,10 +148,13 @@ class Application:
             self.icon.update_menu()
 
     def on_press(self, key):
-        if key == keyboard.Key.ctrl_r:
+        key_name = getattr(key, "name", str(key))
+        self.recovery_hotkey.press(key_name)
+        if key == keyboard.Key.ctrl_r and not self.recovery.running:
             self.controller.press()
 
     def on_release(self, key):
+        self.recovery_hotkey.release(getattr(key, "name", str(key)))
         if key == keyboard.Key.ctrl_r:
             self.controller.release()
 
@@ -184,17 +203,53 @@ class Application:
             self.icon.update_menu()
 
     def on_recording_error(self, error):
-        if self.recovery_requested:
-            return
-        self.recovery_requested = True
-        self.exit_code = 75
-        logging.error("Requesting audio recovery restart: %s", error)
-        if self.icon:
+        logging.error("Requesting in-process audio recovery: %s", error)
+        self.request_recovery()
+
+    def request_recovery(self, icon=None, item=None):
+        if self.controller.state in {"recording", "transcribing"}:
+            if self.icon:
+                self.icon.notify(
+                    "Wait until recording or transcription finishes.",
+                    "Whisper Right Ctrl",
+                )
+            return False
+        requested = self.recovery.request()
+        if requested and self.icon:
             self.icon.notify(
-                "Microphone became unavailable. Restarting automatically.",
+                "Reconnecting the microphone without reloading Whisper.",
                 "Whisper Right Ctrl",
             )
-        self.stop()
+        return requested
+
+    def on_recovery_state_change(self, state):
+        if state == "ready" and self.controller.paused:
+            state = "paused"
+        self.on_state_change(state)
+        if self.icon:
+            if state == "ready":
+                self.icon.notify("Microphone is ready.", "Whisper Right Ctrl")
+            elif state == "unavailable":
+                self.icon.notify(
+                    "Microphone is unavailable. Press Ctrl+Alt+F12 to try again.",
+                    "Whisper Right Ctrl",
+                )
+
+    def status_label(self, item):
+        labels = {
+            "ready": "Status: Ready",
+            "recording": "Status: Recording",
+            "transcribing": "Status: Transcribing",
+            "paused": "Status: Paused",
+            "checking": "Status: Checking microphone",
+            "reconnecting": "Status: Reconnecting microphone",
+            "unavailable": "Status: Microphone unavailable",
+        }
+        return labels.get(self.current_state, f"Status: {self.current_state}")
+
+    def monitor_resume(self):
+        while not self.monitor_stop.wait(15):
+            self.resume_monitor.tick(time.monotonic())
 
     def microphone_menu(self):
         return pystray.Menu(
@@ -210,6 +265,7 @@ class Application:
         )
 
     def stop(self, icon=None, item=None):
+        self.monitor_stop.set()
         if self.listener:
             self.listener.stop()
         if self.icon:
@@ -219,14 +275,18 @@ class Application:
         self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
         self.listener.start()
         menu = pystray.Menu(
+            pystray.MenuItem(self.status_label, None, enabled=False),
+            pystray.MenuItem("Reconnect microphone now (Ctrl+Alt+F12)", self.request_recovery),
             pystray.MenuItem("Microphone", self.microphone_menu()),
             pystray.MenuItem(self.pause_label, self.toggle_pause),
             pystray.MenuItem("Exit", self.stop),
         )
         self.icon = pystray.Icon("whisper-right-ctrl", make_icon(), "Whisper Right Ctrl — ready", menu)
+        self.resume_monitor.tick(time.monotonic())
+        threading.Thread(target=self.monitor_resume, name="resume-monitor", daemon=True).start()
         logging.info("Ready: hold Right Ctrl to record")
         self.icon.run()
-        return self.exit_code
+        return 0
 
 
 def main() -> int:
