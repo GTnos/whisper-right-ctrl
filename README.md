@@ -19,6 +19,7 @@ Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 
 - 按住 Right Ctrl 錄音，放開後自動貼入
 - OpenCC 自動轉換為繁體中文
 - 可從工作列圖示直接切換麥克風
+- 可從工作列圖示選擇快速或高準確辨識模型
 - 依麥克風名稱自動找回裝置，不受 Windows 重排編號影響
 - 若目前的 Windows 音訊介面暫時失效，會自動嘗試同一支麥克風的其他介面
 - 若 Windows 休眠後所有音訊介面都失效，會自動重新啟動並重建麥克風連線
@@ -28,6 +29,8 @@ Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 
 - 每次啟動會實際檢查裝置，只在選單顯示能正常開啟的麥克風
 - 同一支麥克風的重複 Windows 介面會合併成一個選項
 - 可設定登入 Windows 後靜默啟動
+- 安裝後提供開始功能表與桌面啟動捷徑
+- 可從系統匣選單安全地重新啟動常駐程式
 - 不會留下黑色命令視窗
 - 支援瀏覽器、通訊軟體、文件編輯器及筆記工具
 - 原始碼、安裝流程與測試全部公開
@@ -48,6 +51,25 @@ Windows 內建的 `Win + H` 不能替換成 Whisper，也需要使用 Microsoft 
 若電腦從休眠恢復後麥克風尚未就緒，可按鍵盤左側 `Ctrl + Alt + F12`，或在工作列麥克風圖示按滑鼠右鍵後選擇 `Reconnect microphone now`。藍色代表正在重新連線、綠色代表可用、紅色代表錄音中、橘色代表辨識中、深紅色代表麥克風仍無法使用。
 
 啟動時會短暫檢查每個輸入裝置。無法使用的介面不會出現在選單，同一支實體麥克風也只會顯示一次；檢查過程不會儲存錄音。
+若尚未保存麥克風設定，或原本的裝置已無法使用，程式會自動選擇第一個通過檢查的 Windows 輸入裝置並保存；啟動後仍可從系統匣改選其他麥克風。
+
+### 切換辨識模型
+
+在工作列通知區的麥克風圖示按滑鼠右鍵，開啟 `Recognition model` 選單：
+
+- `Fast (recommended) - turbo`：預設選項，適合中文及中英混用，速度與準確度較均衡。
+- `High accuracy - large-v3`：可能改善困難音訊或專有名詞，但辨識速度較慢。
+
+選擇會保存到設定檔，重新啟動 Whisper Right Ctrl 後生效。第一次使用 `large-v3` 時需要下載數 GB 的模型資料，因此啟動時間會較久。RTX 4060 Ti 16 GB 可以使用這兩個模式，但執行其他大量占用顯示記憶體的軟體時，`large-v3` 可能發生資源競爭。
+
+### 啟動或重新啟動程式
+
+安裝完成後，可以從以下任一入口開啟 Whisper Right Ctrl，過程不會顯示黑色命令視窗：
+
+- 開始功能表的 `Whisper Right Ctrl`
+- 桌面的 `Whisper Right Ctrl` 捷徑
+
+如果程式仍在執行，重複點擊捷徑不會開啟第二份程式。若要完整重新載入模型及程式，請在工作列通知區的麥克風圖示按滑鼠右鍵，選擇 `Restart Whisper Right Ctrl`；程式會結束並由監控啟動器在約 1.5 秒後重新開啟。
 
 > 預設設定以 NVIDIA GPU 為目標。參考測試硬體為 RTX 4060 Ti 16 GB。
 
@@ -80,9 +102,12 @@ Hold the keyboard's **Right Ctrl** key to record. Release it to transcribe, conv
 - Traditional Chinese conversion through OpenCC
 - Works in browsers, chat applications, editors, Word, Notion, and Obsidian
 - Hidden startup with no command window
+- Start Menu and desktop launch shortcuts
+- Supervised restart from the tray menu
 - Restores the previous text clipboard after pasting
 - Tray icon for ready, recording, transcribing, pause, and exit states
 - Runtime microphone selection from the tray menu
+- Runtime model selection between `turbo` and `large-v3`
 - Automatic recovery when Windows changes a microphone's numeric device index
 - Automatic fallback to another interface for the same microphone when the current Windows audio interface fails
 - Automatic application restart when sleep invalidates every Windows audio interface
@@ -90,6 +115,7 @@ Hold the keyboard's **Right Ctrl** key to record. Release it to transcribe, conv
 - Manual microphone recovery with Left Ctrl + Alt + F12
 - Startup validation hides input devices that cannot actually open
 - Duplicate interfaces with the same microphone name are collapsed into one menu choice
+- Falls back to the first verified Windows input when no saved microphone is available
 
 ## Privacy
 
@@ -136,6 +162,21 @@ Tray colors:
 - Gray: paused
 
 Right-click the tray icon to pause or exit.
+
+## Change the recognition model
+
+Right-click the tray icon and open `Recognition model`:
+
+- `Fast (recommended) - turbo`: the default multilingual mode.
+- `High accuracy - large-v3`: slower and more GPU-intensive, but may help difficult audio.
+
+The selection is saved immediately and takes effect after restarting Whisper Right Ctrl. The first `large-v3` launch downloads several GB of model data and can take longer than usual.
+
+## Start or restart the application
+
+The installer creates `Whisper Right Ctrl` shortcuts in the Windows Start Menu and on the desktop. Both launch the application silently. Starting it again while it is already running does not create a duplicate process.
+
+To reload the application and model, right-click the tray icon and select `Restart Whisper Right Ctrl`. The supervised launcher starts it again after about 1.5 seconds.
 
 ## Change the microphone
 

@@ -1,6 +1,12 @@
 import json
 
-from whisper_right_ctrl.config import AppConfig, app_data_dir, load_config, save_config
+from whisper_right_ctrl.config import (
+    AppConfig,
+    MODEL_OPTIONS,
+    app_data_dir,
+    load_config,
+    save_config,
+)
 
 
 def test_app_data_dir_is_portable(tmp_path):
@@ -33,3 +39,17 @@ def test_unknown_fields_are_ignored(tmp_path):
     config = load_config(path)
     assert config.input_device == 3
     assert not hasattr(config, "private_path")
+
+
+def test_model_options_only_offer_chinese_capable_modes():
+    assert MODEL_OPTIONS == (
+        ("turbo", "Fast (recommended) - turbo"),
+        ("large-v3", "High accuracy - large-v3"),
+    )
+
+
+def test_unsupported_saved_model_falls_back_to_turbo(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"model": "distil-large-v3.5"}), encoding="utf-8")
+
+    assert load_config(path).model == "turbo"
