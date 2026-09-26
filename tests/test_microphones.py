@@ -21,6 +21,21 @@ def test_resolve_input_device_follows_name_when_windows_changes_index():
     assert selected == devices[1]
 
 
+def test_resolve_input_device_uses_first_working_device_without_saved_choice():
+    devices = [
+        MicrophoneDevice(index=0, name="Windows default input", channels=2),
+        MicrophoneDevice(index=7, name="USB microphone", channels=1),
+    ]
+
+    selected = resolve_input_device(
+        devices,
+        preferred_index=None,
+        preferred_name=None,
+    )
+
+    assert selected == devices[0]
+
+
 def test_unusable_microphones_are_removed_from_the_menu_candidates():
     devices = [
         MicrophoneDevice(index=3, name="Broken microphone", channels=1),

@@ -93,4 +93,4 @@ def resolve_input_device(
     for device in available:
         if device.index == preferred_index:
             return device
-    return None
+    return available[0] if available else None

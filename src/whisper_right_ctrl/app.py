@@ -24,7 +24,7 @@ from whisper_right_ctrl.adapters import (
     WhisperTranscriber,
     add_nvidia_dll_directories,
 )
-from whisper_right_ctrl.config import app_data_dir, load_config, log_path, save_config
+from whisper_right_ctrl.config import MODEL_OPTIONS, app_data_dir, load_config, log_path, save_config
 from whisper_right_ctrl.controller import PushToTalkController
 from whisper_right_ctrl.microphones import (
     MicrophoneDevice,
@@ -73,6 +73,7 @@ class Application:
     def __init__(self):
         self.icon = None
         self.listener = None
+        self.requested_exit_code = 0
         self.current_state = "checking"
         self.monitor_stop = threading.Event()
         self.config = load_config()
@@ -187,6 +188,23 @@ class Application:
 
         return select
 
+    def model_checked(self, model: str):
+        return lambda item: self.config.model == model
+
+    def model_action(self, model: str):
+        def select(icon, item):
+            self.config.model = model
+            save_config(self.config)
+            label = next(label for candidate, label in MODEL_OPTIONS if candidate == model)
+            message = f"{label} will be used after restarting Whisper Right Ctrl."
+            if model == "large-v3":
+                message += " The first launch downloads several GB of model data."
+            logging.info("Selected model for next launch: %s", model)
+            icon.notify(message, "Whisper Right Ctrl")
+            icon.update_menu()
+
+        return select
+
     def on_recorder_device_changed(self, index):
         device = next(
             (candidate for candidate in self.available_microphones if candidate.index == index),
@@ -271,6 +289,11 @@ class Application:
         if self.icon:
             self.icon.stop()
 
+    def restart(self, icon=None, item=None):
+        logging.info("Restart requested from tray menu")
+        self.requested_exit_code = 75
+        self.stop(icon, item)
+
     def run(self):
         self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
         self.listener.start()
@@ -278,7 +301,22 @@ class Application:
             pystray.MenuItem(self.status_label, None, enabled=False),
             pystray.MenuItem("Reconnect microphone now (Ctrl+Alt+F12)", self.request_recovery),
             pystray.MenuItem("Microphone", self.microphone_menu()),
+            pystray.MenuItem(
+                "Recognition model",
+                pystray.Menu(
+                    *[
+                        pystray.MenuItem(
+                            label,
+                            self.model_action(model),
+                            checked=self.model_checked(model),
+                            radio=True,
+                        )
+                        for model, label in MODEL_OPTIONS
+                    ]
+                ),
+            ),
             pystray.MenuItem(self.pause_label, self.toggle_pause),
+            pystray.MenuItem("Restart Whisper Right Ctrl", self.restart),
             pystray.MenuItem("Exit", self.stop),
         )
         self.icon = pystray.Icon("whisper-right-ctrl", make_icon(), "Whisper Right Ctrl — ready", menu)
@@ -286,7 +324,7 @@ class Application:
         threading.Thread(target=self.monitor_resume, name="resume-monitor", daemon=True).start()
         logging.info("Ready: hold Right Ctrl to record")
         self.icon.run()
-        return 0
+        return self.requested_exit_code
 
 
 def main() -> int:

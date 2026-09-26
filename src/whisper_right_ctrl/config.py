@@ -7,6 +7,11 @@ from pathlib import Path
 
 
 APP_DIRECTORY_NAME = "WhisperRightCtrl"
+MODEL_OPTIONS = (
+    ("turbo", "Fast (recommended) - turbo"),
+    ("large-v3", "High accuracy - large-v3"),
+)
+SUPPORTED_MODELS = frozenset(model for model, _ in MODEL_OPTIONS)
 
 
 @dataclass
@@ -42,7 +47,10 @@ def load_config(path: Path | None = None) -> AppConfig:
         raw = json.loads(target.read_text(encoding="utf-8"))
         allowed = {item.name for item in fields(AppConfig)}
         values = {key: value for key, value in raw.items() if key in allowed}
-        return AppConfig(**values)
+        config = AppConfig(**values)
+        if config.model not in SUPPORTED_MODELS:
+            config.model = "turbo"
+        return config
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
         return AppConfig()
 
